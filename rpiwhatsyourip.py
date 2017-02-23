@@ -1,7 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-
+# coding=utf-8
 """
 MIT License
 
@@ -39,6 +36,7 @@ import time
 import telebot
 import tweepy
 
+full_path = os.path.dirname(os.path.abspath(__file__))
 parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--debug', help='Increase verbosity level', action='store_true')
 arg_grp1 = parser.add_argument_group(title='Bots', description='Parameters required for bots to activate. Each bot '
@@ -50,8 +48,8 @@ parser.add_argument('--nrt', help='Do not tweet the current IP if it\'s the same
 args = parser.parse_args()
 
 settings = ConfigParser.RawConfigParser()
-if not os.path.exists('./rpiwhatsyourip.cfg'):
-    settings_file = open('./rpiwhatsyourip.cfg', mode='w')
+if not os.path.exists(full_path + '/rpiwhatsyourip.cfg'):
+    settings_file = open(full_path + '/rpiwhatsyourip.cfg', mode='w')
     settings.add_section('Telegram')
     settings.set('Telegram', 'bot_token', 'INSERT_YOUR_TOKEN_HERE')
     settings.set('Telegram', 'reply_message', 'Your Raspberry IP is {rpiIP}')
@@ -67,7 +65,7 @@ if not os.path.exists('./rpiwhatsyourip.cfg'):
     logging.debug('Config file created')
     sys.exit('A config file has been created for you. Edit \"rpiwhatsyourip.cfg\" with your data.')
 
-settings.read('rpiwhatsyourip.cfg')
+settings.read(full_path + '/rpiwhatsyourip.cfg')
 
 
 def get_safe_config(section):
@@ -117,11 +115,11 @@ if args.twitter:
 def main():
     try:
         if args.debug:
-            logging.basicConfig(filename='rpiwhatsyourip.log', level=logging.DEBUG,
+            logging.basicConfig(filename=full_path + '/rpiwhatsyourip.log', level=logging.DEBUG,
                                 format='[DEBUG] %(asctime)s %(message)s',
                                 datefmt='%d/%m/%Y %I:%M:%S')
         else:
-            logging.basicConfig(filename='rpiwhatsyourip.log', level=logging.ERROR,
+            logging.basicConfig(filename=full_path + '/rpiwhatsyourip.log', level=logging.ERROR,
                                 format='[ERROR] %(asctime)s %(message)s',
                                 datefmt='%d/%m/%Y %I:%M:%S')
         if not (args.telegram or args.twitter):
@@ -176,7 +174,7 @@ def check_ip_change():
 
 
 def changes_saver():
-    settingsfile = open('./rpiwhatsyourip.cfg', mode='w')
+    settingsfile = open(full_path + '/rpiwhatsyourip.cfg', mode='w')
     settings.write(settingsfile)
     settingsfile.close()
     threading.Timer(42, changes_saver).start()
