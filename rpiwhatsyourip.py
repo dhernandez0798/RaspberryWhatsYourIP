@@ -37,6 +37,8 @@ import telebot
 import tweepy
 
 full_path = os.path.dirname(os.path.abspath(__file__))
+startup_timestamp = int(time.time())
+
 parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--debug', help='Increase verbosity level', action='store_true')
 arg_grp1 = parser.add_argument_group(title='Bots', description='Parameters required for bots to activate. Each bot '
@@ -102,7 +104,6 @@ def get_user_ip():
 if args.telegram:
     bot = telebot.TeleBot(
         str(get_safe_config('Telegram')['bot_token']))
-    telegram_updt = 0
 
 if args.twitter:
     twitter_auth = tweepy.OAuthHandler(str(get_safe_config('Twitter')['consumer_key']),
@@ -120,7 +121,7 @@ def main():
                                 datefmt='%d/%m/%Y %I:%M:%S')
         else:
             logging.basicConfig(filename=full_path + '/rpiwhatsyourip.log', level=logging.ERROR,
-                                format='[ERROR] %(asctime)s %(message)s',
+                                format='%(asctime)s %(message)s',
                                 datefmt='%d/%m/%Y %I:%M:%S')
         if not (args.telegram or args.twitter):
             sys.exit('You must activate one bot! Use \"python rpiwhatsyourbot.py --help\" for more information')
@@ -140,11 +141,22 @@ def main():
 
 if args.telegram:
     @bot.message_handler(commands=['yourip'])
-    def bot_reply_ip(message):  # sometimes the server sends twice our update, that's why we'll ignore the first one
-        global telegram_updt
-        if telegram_updt > 0:
+    def bot_reply_ip(message):
+        if int(time.time()) >= (startup_timestamp + 8):  # wait some seconds in order to avoid double updates
             bot.reply_to(message, text=get_safe_config('Telegram')['reply_message'].format(rpiIP=str(get_user_ip())))
-        telegram_updt += 1
+        else:
+            logging.debug('A message was ignored due wait_time [line 154]')
+
+
+    if sys.platform == 'linux' or sys.platform == 'linux2':
+        @bot.message_handler(commands=['shutdown'])
+        def shutdown(message):
+            if int(time.time()) >= (startup_timestamp + 40):  # give the Raspberry enough time to start up
+                logging.info('Turning off because /shutdown command received')
+                os.system('shutdown -h 0')
+            else:
+                bot.reply_to(message, text='Wait {remTime} seconds to power off your Raspberry!'.format(
+                    remTime=abs(int(time.time()) - (startup_timestamp + 40))))
 
 
 def check_ip_change():
